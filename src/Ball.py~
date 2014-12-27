@@ -1,0 +1,40 @@
+import pygame
+import random
+import time
+
+class Ball(pygame.sprite.DirtySprite):
+	
+	def __init__(self, color, rad, pos):
+		pygame.sprite.DirtySprite.__init__(self)
+		self.size = random.randint(4,10)
+		self.image = pygame.surface.Surface((self.size,self.size))
+		self.image.fill((random.randint(200,255),0,0))
+		self.rect = self.image.get_rect()
+		self.rect.x = pos[0]
+		self.rect.y = pos[1]
+		self.dirty = 2
+		self.xvel = random.randint(-10,10)
+		self.yvel = round(random.uniform(1,6.999),3)
+		self.offy = round(random.uniform(.200,.300),3)
+		self.offx = round(random.uniform(.9,1.0),1)
+		self.count = 1.5
+		self.startime = time.time()
+	
+	def update(self):
+		self.gravity()
+		self.rect = self.rect.move(self.xvel, self.yvel)
+		self.count += .5
+		if time.time() - self.startime >= .5:
+			del self
+			return 1
+		else: 
+			return 0
+
+	def gravity(self):
+		self.xvel = self.offx * self.xvel
+		self.yvel = self.offy * self.count * self.count
+		offset = -3 * self.count
+		self.yvel = self.yvel + offset
+	
+	def __del__(self):
+		pass

@@ -1,0 +1,8 @@
+#anim packaging schema:
+#Anim strings named by primary purpose
+#appended by modifier (-walk,-run,etc).
+#Frame count for anim is appended (keep at end of list)
+anim_args = [['WALK',5],['IGNORE',5],['SU',5],['RUNNING',3]]
+sprite_dimensions=(150,158)
+#temp fix
+IDLE_IM = '../images/ENEMY2_SPRITESHEET.png'

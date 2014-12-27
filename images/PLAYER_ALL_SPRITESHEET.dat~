@@ -1,0 +1,8 @@
+#anim packaging schema:
+#Anim strings named by primary purpose
+#appended by modifier (-walk,-run,etc).
+#Frame count for anim is appended (keep at end of list)
+anim_args = [['WALK',5],['IGNORE',15],['RUN',3],['STUN',4], ['IGNORE', 1], ['HIT',4], ['IGNORE', 1], ['DIE', 4]]
+sprite_dimensions=(150,158)
+
+

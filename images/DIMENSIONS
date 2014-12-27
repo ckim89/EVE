@@ -1,0 +1,35 @@
+SPRITE DIMENSIONS:
+    Player = 150, 166
+    Player ATTACK = 150, 172
+    Enemy = 150, 166
+    Animation Frame # = 5
+    Sprite BCKGRND COLOR = ff00e4 / 255,0,228
+
+SWORD:
+    color: ff04d0 (255,4,208)
+
+TILE DIMENSION:
+    FLOOR: 50 x 50
+    WALL: 50 x 50
+    PORTAL: 150 x 150
+    
+MENU_SCREEN:
+	BUTTON_DIMENSIONS = (386, 26)
+	BUTTON_COORDINATES:
+		NEW_GAME = 206, 148
+		CONTINUE = 206, 178
+		HIGH_SCORE = 206, 208
+<<<<<<< HEAD
+		SETTINGS = 206, 238
+
+
+player_width = 150
+player_height = 158
+=======
+		SET BRIGHTNESS = 206, 238
+            DIMENSIONS: 212,26
+        SET VOLUME = 422, 238
+            DIMENSIONS: 169, 26
+
+
+>>>>>>> 0d6c668a2eb164249346c519c60d937d409bc5bb

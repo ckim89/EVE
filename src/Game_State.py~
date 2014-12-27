@@ -1,0 +1,274 @@
+import pygame
+import sys
+import random
+from Enemy import *
+from Player import *
+from GAME_STATES import *
+from Wall import *
+import GAME_GLOBALS
+import level3
+import level0
+import level1
+import level2
+from Camera import *
+import Door
+import High_Score
+import hud
+import dialog
+import time
+import cutscene
+import Ball
+import time
+
+class Game_State(GAME_STATES):
+    def __init__(self, levelname = '../images/ASCIILEVEL0.txt', level = level0.init, prev = None, health = 100,name=0, final = False):
+        GAME_STATES.__init__(self)
+        floor, walls, doors, nulls, ene, row, col, finish,player_location = level(levelname)
+        self.font_obj = pygame.font.Font(GAME_GLOBALS.DEFAULT_FONT, 28)
+        self.text = self.font_obj.render("Level " + str(name) + ": BEGIN TESTING", 1, (255, 255, 255))
+        self.intro_text = pygame.Surface(self.text.get_size())
+        self.intro_text.fill(GAME_GLOBALS.BLACK)
+        self.intro_text.set_alpha(255)
+        self.intro_text.blit(self.text, (0, 0))
+        self.timer = time.time()
+        self.row = row
+        self.col = col
+        self.fade = pygame.Surface(GAME_GLOBALS.WINDOW_SIZE)
+        self.fade.fill(GAME_GLOBALS.BLACK)
+        self.fade.set_alpha(255)
+        self.fade_rate = 3
+        newmap = pygame.Surface((50 * (col + 5), 50 * (row + 5)))
+        self.currhealth = health
+        self.shaketimer = 0
+        self.shakecooldown = 1000
+        self.leveltimer = 0
+        self.Player = Player(GAME_GLOBALS.DEFAULT_PLAYER, (100, 100), player_location)
+        if prev != None:
+            del prev
+        enemy = GAME_GLOBALS.PROJECT_ENEMY
+        self.currlevel = 0
+        if level == level1.init:
+            self.currlevel = 1
+            enemy = GAME_GLOBALS.PROJECT_ENEMY
+            self.Player.current_health = self.currhealth
+        if level == level2.init:
+            self.currlevel = 2
+            enemy = GAME_GLOBALS.CAPTAIN_ENEMY
+            self.Player.current_health = self.currhealth
+        if level == level3.init:
+            self.currlevel = 3
+            enemy = GAME_GLOBALS.PROJECT_ENEMY
+            self.Player.current_health = self.currhealth
+        self.points = pygame.mixer.Sound('../sounds/point.ogg')
+        self.points.set_volume(0.1)
+        self.Doorgroup = pygame.sprite.Group()
+        self.Enemygroup = pygame.sprite.Group()
+        self.Wallgroup = pygame.sprite.Group()
+        self.Projectiles = pygame.sprite.Group()
+        for i in walls:
+            self.Wallgroup.add(Wall((i.position[1] * 50 + 25, i.position[0] * 50 + 25)))
+            newmap.blit(i.im, ((i.position[1]) * 50, i.position[0] * 50))
+        for f in floor:
+            newmap.blit(f.im, (f.position[1] * 50, f.position[0] * 50))
+        for d in doors:
+            newmap.blit(d.im, (d.position[1] * 50, d.position[0] * 50))
+            self.Doorgroup.add(Door.Door((d.position[1] * 50 + 25, d.position[0] * 50 + 25)))
+        for n in nulls:
+            newmap.blit(n.im, (n.position[1] * 50, n.position[0] * 50))
+        for e in ene:
+            self.Enemygroup.add(Enemy(enemy, (100, 100),
+                                      (e[1] * 50, e[0] * 50)))
+        self.levelname = levelname
+        self.finish = [(x[1] * 50, x[0] * 50) for x in finish]
+        self.newmap = newmap
+        GAME_GLOBALS.CURRENT_LEVEL = self.newmap
+        self.camera = Camera()
+        self.bump = pygame.mixer.Sound(GAME_GLOBALS.BUMP)
+        self.bump.set_volume(0.1)
+        self.HUD = hud.Hud()
+        self.current_score = 0
+        self.current_score_rate = 100
+        self.time_flag = time.time()
+        pygame.mixer.music.load('../sounds/level1.ogg')
+        pygame.mixer.music.play(-1)
+        self.approach = pygame.mixer.Sound('../sounds/ApproachEnemy.ogg')
+        self.splatter = False
+        self.currentsplatter = None
+        self.dirtydraws = pygame.sprite.LayeredDirty
+        self.modal = False
+        self.final = False
+        self.extras = []
+
+    def check_active_dialog(self):
+        pass
+
+    def update_score(self, dt):
+        if dt >= 5:
+                if self.current_score_rate > 0:
+                    self.current_score_rate -= 5
+                self.current_score += self.current_score_rate
+                self.time_flag += dt
+
+    def nextl(self):
+        if self.levelname == '../images/ASCIILEVEL1.txt':
+            GAME_GLOBALS.GAME_STATE = Game_State(levelname='../images/bigelevatorthing.txt', level = level2.init, prev = self, health = self.Player.current_health, name=2, final= True)
+        elif self.levelname == '../images/ASCIILEVEL0.txt':
+            GAME_GLOBALS.GAME_STATE = Game_State(levelname='../images/ASCIILEVEL1.txt', level = level1.init, prev = self, health = self.Player.current_health, name=1, final= False)
+        elif self.levelname == '../images/bigelevatorthing.txt':
+            GAME_GLOBALS.GAME_STATE = Game_State(levelname='../images/ASCIILEVEL3.txt', level = level3.init, prev = self, health = self.Player.current_health, name=3, final= False)
+
+
+    def spawn_particles(self, im, pos, type='drop'):
+        bloodsplatter = pygame.sprite.Group()
+        self.splatter = True
+        for j in range(20):
+            bloodsplatter.add(Ball.Ball((0,0,0),100,pos, im=im, type=type))
+        self.currentsplatter = bloodsplatter
+
+    def update(self, event):
+        dt = float(time.time() - self.timer)
+        if dt >=  3:
+            self.intro_text.set_alpha(self.intro_text.get_alpha() - (self.fade_rate + 2))
+        if self.intro_text.get_alpha() <= 0:
+            pass
+        if self.fade.get_alpha() - self.fade_rate <= 0:
+             self.fade.set_alpha(0)
+        else:
+            curr_a = self.fade.get_alpha()
+            curr_a -= self.fade_rate
+            self.fade.set_alpha(curr_a)
+            x = self.fade.get_alpha()
+        self.check_esc()
+        self.DRAW_DISP.fill(GAME_GLOBALS.BLACK)
+        self.check_active_dialog()
+        self.update_score(time.time() - self.time_flag)
+
+        for f in self.finish:
+            if self.currlevel == 3:
+                self.final = True
+            if self.Player.rect.collidepoint(f):
+                if self.final:
+                    GAME_GLOBALS.GAME_STATE = High_Score.High_Score(self.current_score, 'Daniel')
+                elif self.currlevel == 0:
+                    GAME_GLOBALS.GAME_STATE = cutscene.Cutscene('../images/Eve awake.png','../resource/EVEawkeningcinematic', self.nextl)
+                elif self.currlevel == 1:
+                    GAME_GLOBALS.GAME_STATE = cutscene.Cutscene('../images/darkalley.jpg','../resource/EVEknows', self.nextl)
+                elif self.currlevel == 2:
+                    GAME_GLOBALS.GAME_STATE = cutscene.Cutscene('../images/darkmaze.jpg','../resource/EVEmaze', self.nextl)
+
+
+        for e in self.Enemygroup:
+            proj = e.update(self.Player.rect, self.Wallgroup)
+            if proj != None:
+                self.Projectiles.add(proj)
+        for p in self.Projectiles:
+            test = p.update(self.Wallgroup, self.Player.rect, self.Player)
+<<<<<<< HEAD
+            if test == True:
+                self.spawn_particles(None, self.Player.rect.center)
+=======
+            if test == True and p.hitplayer == True:
+                bloodsplatter = pygame.sprite.Group()
+                self.splatter = True
+                for j in range(20):
+                    bloodsplatter.add(Ball.Ball((0,0,0),100,self.Player.rect.center))
+                self.currentsplatter = bloodsplatter
+>>>>>>> 001d24ea46f697c97d4bcbeb65c1b7b4ccb665c7
+                self.Projectiles.remove(p)
+                p = None
+            elif test == True:
+                self.Projectiles.remove(p)
+
+        flags = self.Player.update(pygame.key.get_pressed(), self.Wallgroup, self.Enemygroup, self.current_score, self.Projectiles)
+        if 'player_dmg' in flags:
+            self.spawn_particles(None, self.Player.rect.center)
+
+        for d in self.Doorgroup:
+            dpos = d.teleport_hax(self.Player.rect)
+            self.Player.rect.centerx += dpos[0]
+
+        self.camera.update(self.Player.rect.center)
+        for i in self.Enemygroup:
+            if i.health <= 0:
+                self.spawn_particles(None, i.rect.center)
+                self.current_score += 500
+                scoretext = pygame.Surface((100,100))
+                scoretext.fill(GAME_GLOBALS.BLACK)
+                scoretext.set_colorkey(GAME_GLOBALS.BLACK)
+                scoretext.blit(self.font_obj.render("+500", 1,
+                                             (random.randint(1,255),
+                                              random.randint(1,255),
+                                              random.randint(1,255))), (0,0))
+                scoretext.set_alpha(255)
+                newball = Ball.Ball((0, 0, 0), 2, i.rect.topleft, im=scoretext)
+
+                self.extras.append(newball)
+
+                self.points.play()
+                self.Enemygroup.remove(i)
+
+        self.DRAW_DISP.blit(self.camera.current_frame, (0, 0))
+        for e in self.Enemygroup:
+            p = (e.rect.left - self.camera.r.left, e.rect.top - self.camera.r.top)
+            self.DRAW_DISP.blit(e.image, p)
+        for p in self.Projectiles:
+            f = (p.rect.left - self.camera.r.left, p.rect.top - self.camera.r.top)
+            self.DRAW_DISP.blit(p.image, f)
+        if self.splatter:
+            if len(self.currentsplatter) != 0:
+                for b in self.currentsplatter:
+                    if b.update() == 1:
+                        self.currentsplatter.remove(b)
+                    else:
+                        c = (b.rect.left - self.camera.r.left, b.rect.top - self.camera.r.top)
+                        self.DRAW_DISP.blit(b.image,c)
+            else:
+                self.splatter = False
+        self.HUD.update((self.Player.current_health, self.Player.max_health), self.current_score, self.Player.invuln, self.col, self.row, self.newmap)
+        self.DRAW_DISP.blit(self.Player.image, (350, 250))
+
+        if self.Player.state == 'ATTACK':
+            self.DRAW_DISP.blit(self.Player.weaponim, self.Player.blitpos)
+
+        if self.currlevel == 2:
+            if self.shaketimer == 500:
+                self.shakecooldown = 0
+            if self.shaketimer != 500 and self.shakecooldown == 1000:
+                x = self.shake()
+                temp = pygame.Surface(GAME_GLOBALS.WINDOW_SIZE)
+                temp.blit(self.DRAW_DISP, (0,0))
+                self.DRAW_DISP.blit(temp, x)
+                self.shaketimer += 2
+            else:
+                self.shakecooldown += 5
+                self.shaketimer = 0
+
+        for e in self.extras:
+
+            if e.update() == 1:
+                self.extras.remove(e)
+            else:
+                c = (e.rect.left - self.camera.r.left, e.rect.top - self.camera.r.top)
+                self.DRAW_DISP.blit(e.image, c)
+
+
+
+        self.DRAW_DISP.blit(self.fade, (0, 0))
+        self.DRAW_DISP.blit(self.intro_text, (GAME_GLOBALS.WINDOW_WIDTH/2 - self.intro_text.get_size()[0]/2,
+                                              GAME_GLOBALS.WINDOW_HEIGHT/3))
+        self.check_esc()
+
+
+    def check_esc(self):
+        if pygame.key.get_pressed()[pygame.K_ESCAPE] == 1:
+            GAME_GLOBALS.GAME_STATE = GAME_GLOBALS.GAME_MAIN_MENU
+            GAME_GLOBALS.GAME_STATE.set_display()
+
+    def shake(self):
+        dx = 0
+        dy = 0
+        temp = [0, 3, -3]
+        randx = temp[random.randint(0, 2)]
+        randy = temp[random.randint(0, 2)]
+        return (randx, randy)
+

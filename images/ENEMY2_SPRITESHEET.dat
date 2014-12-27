@@ -1,0 +1,2 @@
+anim_args = [['WALK',9],['IGNORE',1],['ATTACK',4],['IGNORE',1]]
+sprite_dimensions=(150,158)
